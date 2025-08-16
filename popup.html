@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MySubTrack</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      body { margin: 0; }
+    </style>
+  </head>
+  <body class="mysubtrack-popup">
+    <div class="mysubtrack-popup-header">
+      <div class="mysubtrack-popup-logo">M</div>
+      <div class="mysubtrack-popup-title">
+        <h1>MySubTrack</h1>
+        <small>Subscription Detector</small>
+      </div>
+    </div>
+
+    <div class="mysubtrack-popup-card">
+      <div class="mysubtrack-stats">
+        <div class="mysubtrack-stat">
+          <div class="mysubtrack-stat-label">Detected today</div>
+          <div id="stat-today" class="mysubtrack-stat-value">0</div>
+        </div>
+        <div class="mysubtrack-stat">
+          <div class="mysubtrack-stat-label">Total saved</div>
+          <div id="stat-saved" class="mysubtrack-stat-value">$0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mysubtrack-section-title">Settings</div>
+    <div class="mysubtrack-toggles">
+      <div class="mysubtrack-toggle">
+        <label for="toggle-auto">Auto-detect</label>
+        <label class="switch">
+          <input id="toggle-auto" type="checkbox">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="mysubtrack-toggle">
+        <label for="toggle-notify">Show notifications</label>
+        <label class="switch">
+          <input id="toggle-notify" type="checkbox">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="mysubtrack-popup-actions">
+      <button id="btn-dashboard" class="mysubtrack-link">View Dashboard</button>
+      <button id="btn-test" class="mysubtrack-test">Test Detection</button>
+    </div>
+
+    <div class="mysubtrack-footer">v1.1.0 • mysubtrack.com</div>
+
+    <script src="popup.js"></script>
+  </body>
+  </html>
+
+
