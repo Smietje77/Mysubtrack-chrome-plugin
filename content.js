@@ -155,9 +155,9 @@
         }
         
         return { isDuplicate: false };
-             } catch (error) {
-         return { isDuplicate: false };
-       }
+      } catch (error) {
+        return { isDuplicate: false };
+      }
     }
 
     static calculateSimilarity(str1, str2) {
@@ -473,7 +473,7 @@
           <div class="mysubtrack-toast-icon ${iconClass}">
             ${icon}
           </div>
-          <div class="mysubtrack-toast-message">${message}</div>
+          <div class="mysubtrack-toast-message">${sanitizeHTML(message)}</div>
           <button class="mysubtrack-toast-close" aria-label="Close notification">×</button>
         </div>
       `;
@@ -1888,16 +1888,26 @@
        return 'monthly';
      }
 
+    // HTML sanitization function to prevent XSS
+    function sanitizeHTML(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
     function formatButtonText(subscriptionData) {
       const confidenceBadge = subscriptionData.confidence === 'High' ? ' ✓' : ' ?';
+      const serviceName = sanitizeHTML(subscriptionData.service);
       
       if (subscriptionData.price && subscriptionData.price > 0) {
         const currency = subscriptionData.priceText?.match(/[€$£¥₹]/)?.[0] || '$';
         const cycle = subscriptionData.billingCycle === 'yearly' ? '/year' : 
                      subscriptionData.billingCycle === 'weekly' ? '/week' : '/month';
-        return `Add ${subscriptionData.service} (${currency}${subscriptionData.price}${cycle}) to MySubTrack${confidenceBadge}`;
+        const price = parseFloat(subscriptionData.price).toFixed(2);
+        return `Add ${serviceName} (${sanitizeHTML(currency)}${price}${sanitizeHTML(cycle)}) to MySubTrack${confidenceBadge}`;
       } else {
-        return `Add ${subscriptionData.service} to MySubTrack${confidenceBadge}`;
+        return `Add ${serviceName} to MySubTrack${confidenceBadge}`;
       }
     }
 
@@ -1961,12 +1971,21 @@
         '<span class="mysubtrack-confidence-high">High Confidence ✓</span>' : 
         '<span class="mysubtrack-confidence-medium">Medium Confidence ?</span>';
 
+      const sanitizedService = sanitizeHTML(subscriptionData.service);
+      const sanitizedPlan = sanitizeHTML(subscriptionData.plan || '');
+      const sanitizedCurrency = sanitizeHTML(currency);
+      const sanitizedCycle = sanitizeHTML(cycle);
+      const sanitizedBillingCycle = sanitizeHTML(subscriptionData.billingCycle.charAt(0).toUpperCase() + subscriptionData.billingCycle.slice(1));
+      const sanitizedLogoUrl = sanitizeHTML(logoUrl || '');
+      const priceDisplay = subscriptionData.price && subscriptionData.price > 0 ? 
+        `${sanitizedCurrency}${parseFloat(subscriptionData.price).toFixed(2)}${sanitizedCycle}` : 'Not detected';
+
       const modalHTML = `
         <div id="${CONFIG.modalBackdropId}" class="mysubtrack-modal-backdrop">
           <div id="${CONFIG.modalId}" class="mysubtrack-modal">
             <div class="mysubtrack-modal-header">
               <div class="mysubtrack-modal-title">
-                ${logoUrl ? `<img src="${logoUrl}" alt="${subscriptionData.service}" class="mysubtrack-service-logo">` : ''}
+                ${logoUrl ? `<img src="${sanitizedLogoUrl}" alt="${sanitizedService}" class="mysubtrack-service-logo">` : ''}
                 <h2>Add Subscription</h2>
                 <div class="mysubtrack-confidence-badge">
                   ${confidenceBadge}
@@ -1983,22 +2002,22 @@
               <form id="mysubtrack-subscription-form">
                 <div class="mysubtrack-form-group">
                   <label for="service-name">Service</label>
-                  <input type="text" id="service-name" value="${subscriptionData.service}" readonly>
+                  <input type="text" id="service-name" value="${sanitizedService}" readonly>
                 </div>
                 
                 <div class="mysubtrack-form-group">
                   <label for="plan-name">Plan</label>
-                  <input type="text" id="plan-name" value="${subscriptionData.plan}" readonly>
+                  <input type="text" id="plan-name" value="${sanitizedPlan}" readonly>
                 </div>
                 
                 <div class="mysubtrack-form-group">
                   <label for="price">Price</label>
-                  <input type="text" id="price" value="${subscriptionData.price && subscriptionData.price > 0 ? currency + subscriptionData.price + cycle : 'Not detected'}" readonly>
+                  <input type="text" id="price" value="${priceDisplay}" readonly>
                 </div>
                 
                 <div class="mysubtrack-form-group">
                   <label for="billing-cycle">Billing Cycle</label>
-                  <input type="text" id="billing-cycle" value="${subscriptionData.billingCycle.charAt(0).toUpperCase() + subscriptionData.billingCycle.slice(1)}" readonly>
+                  <input type="text" id="billing-cycle" value="${sanitizedBillingCycle}" readonly>
                 </div>
                 
                 <div class="mysubtrack-form-group">
@@ -2108,8 +2127,9 @@
       button.id = CONFIG.buttonId;
       button.className = 'mysubtrack-button';
       const logoUrlBtn = getServiceLogoUrl(subscriptionData.service);
+      const sanitizedServiceName = sanitizeHTML(subscriptionData.service);
       button.innerHTML = `
-        ${logoUrlBtn ? `<img class="mysubtrack-button-logo" src="${logoUrlBtn}" alt="${subscriptionData.service}" />` : `
+        ${logoUrlBtn ? `<img class="mysubtrack-button-logo" src="${sanitizeHTML(logoUrlBtn)}" alt="${sanitizedServiceName}" />` : `
         <svg class="mysubtrack-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="currentColor"/>
         </svg>`}
@@ -2118,8 +2138,20 @@
 
       // Brand the button if we have service colors
       if (subscriptionData.brandColors && Array.isArray(subscriptionData.brandColors) && subscriptionData.brandColors.length) {
-        const [c1, c2] = [subscriptionData.brandColors[0], subscriptionData.brandColors[1] || subscriptionData.brandColors[0]];
-        button.style.background = `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`;
+        // Validate colors to prevent CSS injection
+        const isValidColor = (color) => {
+          if (!color || typeof color !== 'string') return false;
+          // Allow hex colors, rgb/rgba, hsl/hsla, and named colors
+          const colorRegex = /^(#[0-9A-Fa-f]{3,8}|rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)|rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)|hsl\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*\)|hsla\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*,\s*[\d.]+\s*\)|[a-zA-Z]+)$/;
+          return colorRegex.test(color.trim());
+        };
+        
+        const c1 = subscriptionData.brandColors[0];
+        const c2 = subscriptionData.brandColors[1] || subscriptionData.brandColors[0];
+        
+        if (isValidColor(c1) && isValidColor(c2)) {
+          button.style.background = `linear-gradient(135deg, ${c1.trim()} 0%, ${c2.trim()} 100%)`;
+        }
       }
 
       // Add click event - now opens modal instead of direct submission
@@ -2212,6 +2244,7 @@
             sendResponse({ detected: !!data, data });
             return true;
           } else if (request && request.type === 'mysubtrack_get_stats') {
+            // Handle async operation properly
             (async () => {
               try {
                 const today = await mockAPI.getTodayDetectionsCount();
@@ -2221,7 +2254,7 @@
                 sendResponse({ today: 0, totalSaved: 0 });
               }
             })();
-            return true;
+            return true; // Keep message port open for async response
           }
         });
       }
